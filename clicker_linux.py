@@ -77,7 +77,7 @@ def start_scanning():
             fallout = 0
             result = results[0].boxes.xyxy.cpu().numpy()  # انتقال Tensor به CPU و تبدیل به numpy array
             result = result[np.argsort(result[:, 3]*-1)]
-            for box in result:
+            for box in result[:1]:
                 x_center = int((box[0] + box[2]) / 2)
                 y_center = int((box[1] + box[3]) / 2) + fallout
                 
