@@ -5,13 +5,16 @@ import cv2
 import time
 import numpy as np
 from ultralytics import YOLO
-from PIL import ImageGrab
 import threading
+import subprocess
+import mss
 
 model = YOLO('best.pt')
 
 def click_at_point(x, y):
-    pyautogui.click(x=x, y=y)
+    print(f"Clicking at ({x}, {y})")  # برای دیباگ
+    subprocess.run(["xdotool", "mousemove", str(x), str(y)])
+    subprocess.run(["xdotool", "click", "1"])
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -62,23 +65,29 @@ def start_scanning():
     x2=1910
     y1=0
     y2=1010
+    sct = mss.mss()
+    
     while time.time() < end_time:
-        screenshot = ImageGrab.grab(bbox=(x1, y1, x2, y2))
-        screenshot = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-        results = model(screenshot , conf= float(conf_entry.get()))
+        monitor = {"top": y1, "left": x1, "width": x2 - x1, "height": y2 - y1}
+        screenshot = np.array(sct.grab(monitor))
+        screenshot = cv2.cvtColor(screenshot, cv2.COLOR_BGRA2BGR)
+        
+        results = model(screenshot, conf=float(conf_entry.get()))
         try:
             fallout = 0
-            result = results[0].boxes.xyxy[np.argsort(results[0].boxes.xyxy[:, 3]*-1)]
+            result = results[0].boxes.xyxy.cpu().numpy()  # انتقال Tensor به CPU و تبدیل به numpy array
+            result = result[np.argsort(result[:, 3]*-1)]
             for box in result:
                 x_center = int((box[0] + box[2]) / 2)
-                y_center = int((box[1] + box[3]) / 2)+fallout
+                y_center = int((box[1] + box[3]) / 2) + fallout
                 
                 thread = threading.Thread(target=click_at_point, args=[x_center + x1, y_center + y1])
                 threads.append(thread)
                 thread.start()                
                 fallout += 22
-        except:
-            print("")
+        except Exception as e:
+            print("Error:", e)
+    
     for thread in threads:
         thread.join()
 
@@ -111,7 +120,6 @@ duration_entry = ctk.CTkEntry(master=frame)
 duration_entry.pack(pady=12, padx=10)
 duration_entry.insert(0, "35")
 
-
 select_area_button = ctk.CTkButton(master=frame, text="Enter Coordinates", command=enter_coordinates)
 select_area_button.pack(pady=12, padx=10)
 
@@ -136,6 +144,5 @@ def close_application():
     
 close_button = ctk.CTkButton(master=frame, text="Close", command=close_application)
 close_button.pack(side=tk.BOTTOM, pady=12, padx=10)
-
 
 root.mainloop()
