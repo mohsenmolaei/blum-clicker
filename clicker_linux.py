@@ -61,9 +61,9 @@ def start_scanning():
     duration = int(duration_entry.get())
     end_time = time.time() + duration
     threads = []
-    x1=1400
-    x2=1910
-    y1=0
+    x1=1450
+    x2=1900
+    y1=100
     y2=800
     sct = mss.mss()
     
